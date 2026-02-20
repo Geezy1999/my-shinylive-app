@@ -33,17 +33,20 @@ labs  <- colnames(W)
 W_min <- apply(W, 2, min, na.rm = TRUE)
 W_max <- apply(W, 2, max, na.rm = TRUE)
 
+# Display-only rounding helpers (shared style)
+round_up_2dp   <- function(x) ceiling(x * 100) / 100
+round_down_2dp <- function(x) floor(x * 100) / 100
+W_min_disp <- round_up_2dp(W_min)
+W_max_disp <- round_down_2dp(W_max)
+
+# Use 2dp spinner step in both apps (does NOT force rounding of typed values)
+STEP_2DP <- 0.01
+
 # ============================================================
 # App 1 (Module): Mini boxplots from neighbours
 # ============================================================
 app1UI <- function(id) {
   ns <- NS(id)
-  
-  # Display-only rounding helpers (App 1 only)
-  round_up_2dp   <- function(x) ceiling(x * 100) / 100
-  round_down_2dp <- function(x) floor(x * 100) / 100
-  W_min_disp <- round_up_2dp(W_min)
-  W_max_disp <- round_down_2dp(W_max)
   
   fluidPage(
     titlePanel("Factor Portfolio Positioning Explorer"),
@@ -59,10 +62,10 @@ app1UI <- function(id) {
           ns("mom"), "Momentum",
           value = NULL,
           min = W_min["Momentum"], max = W_max["Momentum"],
-          step = 0.005
+          step = STEP_2DP
         ),
         helpText(sprintf(
-          "SAA: %.4f | Allowed range: [%.2f, %.2f]",
+          "SAA: %.2f | Allowed range: [%.2f, %.2f]",
           SAA["Momentum"], W_min_disp["Momentum"], W_max_disp["Momentum"]
         )),
         
@@ -70,10 +73,10 @@ app1UI <- function(id) {
           ns("qua"), "Quality",
           value = NULL,
           min = W_min["Quality"], max = W_max["Quality"],
-          step = 0.005
+          step = STEP_2DP
         ),
         helpText(sprintf(
-          "SAA: %.4f | Allowed range: [%.2f, %.2f]",
+          "SAA: %.2f | Allowed range: [%.2f, %.2f]",
           SAA["Quality"], W_min_disp["Quality"], W_max_disp["Quality"]
         )),
         
@@ -81,10 +84,10 @@ app1UI <- function(id) {
           ns("val"), "Value",
           value = NULL,
           min = W_min["Value"], max = W_max["Value"],
-          step = 0.005
+          step = STEP_2DP
         ),
         helpText(sprintf(
-          "SAA: %.4f | Allowed range: [%.2f, %.2f]",
+          "SAA: %.2f | Allowed range: [%.2f, %.2f]",
           SAA["Value"], W_min_disp["Value"], W_max_disp["Value"]
         )),
         
@@ -384,33 +387,33 @@ app2UI <- function(id) {
           ns("mom"), "Momentum",
           value = NULL,
           min = W_min["Momentum"], max = W_max["Momentum"],
-          step = 0.005
+          step = STEP_2DP
         ),
         helpText(sprintf(
-          "SAA: %.4f | Allowed range: [%.4f, %.4f]",
-          SAA["Momentum"], W_min["Momentum"], W_max["Momentum"]
+          "SAA: %.2f | Allowed range: [%.2f, %.2f]",
+          SAA["Momentum"], W_min_disp["Momentum"], W_max_disp["Momentum"]
         )),
         
         numericInput(
           ns("qua"), "Quality",
           value = NULL,
           min = W_min["Quality"], max = W_max["Quality"],
-          step = 0.005
+          step = STEP_2DP
         ),
         helpText(sprintf(
-          "SAA: %.4f | Allowed range: [%.4f, %.4f]",
-          SAA["Quality"], W_min["Quality"], W_max["Quality"]
+          "SAA: %.2f | Allowed range: [%.2f, %.2f]",
+          SAA["Quality"], W_min_disp["Quality"], W_max_disp["Quality"]
         )),
         
         numericInput(
           ns("val"), "Value",
           value = NULL,
           min = W_min["Value"], max = W_max["Value"],
-          step = 0.005
+          step = STEP_2DP
         ),
         helpText(sprintf(
-          "SAA: %.4f | Allowed range: [%.4f, %.4f]",
-          SAA["Value"], W_min["Value"], W_max["Value"]
+          "SAA: %.2f | Allowed range: [%.2f, %.2f]",
+          SAA["Value"], W_min_disp["Value"], W_max_disp["Value"]
         )),
         
         tags$hr(),
@@ -570,13 +573,13 @@ app2Server <- function(id) {
       bi <- best_idx()
       
       cat("\nNearby feasible tilt (blue point):\n")
-      if (is.null(p)) cat("(none)\n") else print(round(p, 4))
+      if (is.null(p)) cat("(none)\n") else print(round(p, 2))
       
       cat("\nBest portfolio for chosen objective (green point):\n")
       if (is.null(bi)) {
         cat("(none)\n")
       } else {
-        cat("Portfolio weights:", paste0(colnames(W), "=", round(W[bi, ], 4), collapse = ", "), "\n")
+        cat("Portfolio weights:", paste0(colnames(W), "=", round(W[bi, ], 2), collapse = ", "), "\n")
         cat("Objective value:", round(M[bi, input$metric], 6), "\n")
       }
     })
