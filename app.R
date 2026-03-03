@@ -941,7 +941,7 @@ ui <- navbarPage(
   useShinyjs(),
   tabPanel("Tool 1: Local Tilt Ranges", app1UI("tool1")),
   tabPanel("Tool 2: Objective Optimiser", app2UI("tool2")),
-  tabPanel("Tool 3: Factor Allocation Scenerio Tool", tool3UI("tool3"))
+  tabPanel("Tool 3: Scenerio Analysis", tool3UI("tool3"))
 )
 
 server <- function(input, output, session) {
