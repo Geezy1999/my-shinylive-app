@@ -2,7 +2,7 @@ library(shiny)
 library(shinyjs)
 
 # ============================================================
-# Shared INPUTS (must exist in your environment)
+# Shared INPUTS
 # ============================================================
 W <- as.matrix(read.csv("data/wts.csv"))[, -1]
 colnames(W) <- c("Momentum", "Quality", "Value")
@@ -10,30 +10,44 @@ colnames(W) <- c("Momentum", "Quality", "Value")
 SAA <- c(0.4, 0.25, 0.35)
 names(SAA) <- c("Momentum", "Quality", "Value")
 
-# For App 2
 M <- as.matrix(read.csv("data/mat_idxs.csv"))[, -1]
 colnames(M) <- c("P(Alpha>AT)", "Information Ratio", "P(Alpha<0|12M)", "Batting Avg", "P(Alpha<-5|12M)")
-stopifnot(is.matrix(M), nrow(M) == nrow(W))
-stopifnot(!is.null(colnames(M)))
-stopifnot(all(is.finite(M)))
 
-metric_dir <- c(1, 1, -1, 1, -1)  # <-- must match ncol(M)
-stopifnot(is.numeric(metric_dir), length(metric_dir) == ncol(M))
-stopifnot(all(metric_dir %in% c(-1, 1)))
+W_u <- as.matrix(read.csv("data/wts_unconstrained.csv"))[, -1]
+colnames(W_u) <- c("Momentum", "Quality", "Value")
+
+M_u <- as.matrix(read.csv("data/mat_idxs_unconstrained.csv"))[, -1]
+colnames(M_u) <- colnames(M)
+
+labs <- colnames(W)
+STEP_2DP <- 0.01
+
+APP_CSS <- "
+.small-error { color: #d11; font-size: 12px; margin-bottom: 10px; }
+"
+library(shiny)
+library(shinyjs)
+
+# ============================================================
+# Shared INPUTS (must exist in your environment)
+# ============================================================
+
+W <- as.matrix(read.csv("data/wts.csv"))[, -1]
+colnames(W) <- c("Momentum", "Quality", "Value")
+
+SAA <- c(0.4, 0.25, 0.35)
+names(SAA) <- c("Momentum", "Quality", "Value")
+
+M <- as.matrix(read.csv("data/mat_idxs.csv"))[, -1]
+colnames(M) <- c("P(Alpha>AT)", "Information Ratio", "P(Alpha<0|12M)", "Batting Avg", "P(Alpha<-5|12M)")
+
+metric_dir <- c(1, 1, -1, 1, -1)
 names(metric_dir) <- colnames(M)
 
-# Shared checks
-stopifnot(is.matrix(W), ncol(W) == 3)
-stopifnot(all(is.finite(W)))
-stopifnot(all(abs(rowSums(W) - 1) < 1e-8))
-stopifnot(is.numeric(SAA), length(SAA) == 3)
-
-# Shared helpers
 labs  <- colnames(W)
-W_min <- apply(W, 2, min, na.rm = TRUE)
-W_max <- apply(W, 2, max, na.rm = TRUE)
+W_min <- apply(W, 2, min)
+W_max <- apply(W, 2, max)
 
-# Display-only rounding helpers
 round_up_2dp   <- function(x) ceiling(x * 100) / 100
 round_down_2dp <- function(x) floor(x * 100) / 100
 W_min_disp <- round_up_2dp(W_min)
@@ -41,9 +55,6 @@ W_max_disp <- round_down_2dp(W_max)
 
 STEP_2DP <- 0.01
 
-# ============================================================
-# Shared UI styling (robust lock + red input)
-# ============================================================
 APP_CSS <- "
 .locked-wrap { opacity: 0.45 !important; pointer-events: none !important; }
 input.out-of-range { border: 2px solid #d11 !important; background-color: #ffecec !important; }
@@ -333,40 +344,40 @@ app1Server <- function(id) {
       
       tags$pre(HTML(paste(lines, collapse = "\n")))
     })
-  
-  output$bxp_plot <- renderPlot({
-    bxp(
-      bxp_obj_full,
-      main = "Boxplot of TAA Ranges",
-      boxfill   = "grey95",
-      border    = "grey80",
-      whiskcol  = "grey80",
-      staplecol = "grey80",
-      lwd       = 2.5,
-      outline   = FALSE
-    )
     
-    points(1:3, SAA[1:3], pch = 21, bg = "red",  col = "red",   cex = 1.65, lwd = 2)
-    points(1:3, SAA[1:3], pch = 21, bg = "red",  col = "white", cex = 1.30, lwd = 2)
-    
-    info <- mini_info()
-    if (!is.null(info)) {
-      drv_pos <- match(active_driver(), labs)
-      if (is.finite(drv_pos)) points(drv_pos, info$target, pch = 23, bg = "blue", col = "white", cex = 1.2)
+    output$bxp_plot <- renderPlot({
+      bxp(
+        bxp_obj_full,
+        main = "Boxplot of TAA Ranges",
+        boxfill   = "grey95",
+        border    = "grey80",
+        whiskcol  = "grey80",
+        staplecol = "grey80",
+        lwd       = 2.5,
+        outline   = FALSE
+      )
       
-      at_pos <- match(info$other, labs)
-      stats_m <- as.matrix(info$bxp$stats)
-      for (i in seq_along(at_pos)) draw_mini_box(stats = stats_m[, i], x = at_pos[i], halfwidth = 0.14)
+      points(1:3, SAA[1:3], pch = 21, bg = "red",  col = "red",   cex = 1.65, lwd = 2)
+      points(1:3, SAA[1:3], pch = 21, bg = "red",  col = "white", cex = 1.30, lwd = 2)
       
-      legend("topright",
-             legend = c("Strategic factor allocation", "Dynamic (local) tilt ranges"),
-             pch = c(16, 15), col = c("red", "blue"),
-             pt.cex = c(1.4, 1.2), bty = "n")
-    } else {
-      legend("topright", legend = c("Strategic factor allocation"),
-             pch = 16, col = "red", pt.cex = 1.4, bty = "n")
-    }
-  })
+      info <- mini_info()
+      if (!is.null(info)) {
+        drv_pos <- match(active_driver(), labs)
+        if (is.finite(drv_pos)) points(drv_pos, info$target, pch = 23, bg = "blue", col = "white", cex = 1.2)
+        
+        at_pos <- match(info$other, labs)
+        stats_m <- as.matrix(info$bxp$stats)
+        for (i in seq_along(at_pos)) draw_mini_box(stats = stats_m[, i], x = at_pos[i], halfwidth = 0.14)
+        
+        legend("topright",
+               legend = c("Strategic factor allocation", "Dynamic (local) tilt ranges"),
+               pch = c(16, 15), col = c("red", "blue"),
+               pt.cex = c(1.4, 1.2), bty = "n")
+      } else {
+        legend("topright", legend = c("Strategic factor allocation"),
+               pch = 16, col = "red", pt.cex = 1.4, bty = "n")
+      }
+    })
   })
 }
 
@@ -738,19 +749,205 @@ app2Server <- function(id) {
   })
 }
 
+
 # ============================================================
-# Main wrapper
+# TOOL 3 (INTEGRATED CLEANLY)
 # ============================================================
+
+tool3UI <- function(id) {
+  ns <- NS(id)
+  
+  fluidPage(
+    tags$style(HTML(APP_CSS)),
+    titlePanel("Manager Allocation → Objective Comparison"),
+    sidebarLayout(
+      sidebarPanel(
+        numericInput(ns("mom"), "Momentum", value = 0.40, min = 0, max = 1, step = STEP_2DP),
+        numericInput(ns("qua"), "Quality",  value = 0.25, min = 0, max = 1, step = STEP_2DP),
+        numericInput(ns("val"), "Value",    value = 0.35, min = 0, max = 1, step = STEP_2DP),
+        uiOutput(ns("sum_display")),
+        uiOutput(ns("weight_error")),
+        tags$hr(),
+        actionButton(ns("run"), "Compute", class = "btn-primary"),
+        tags$hr(),
+        h4("Weights: Strategic vs Manager"),
+        tableOutput(ns("weights_tbl")),
+        tags$hr(),
+        h4("Objective Values (Unconstrained Universe)"),
+        tableOutput(ns("obj_tbl"))
+      ),
+      mainPanel(
+        plotOutput(ns("bxp_plot"), height = "520px")
+      )
+    )
+  )
+}
+
+tool3Server <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    
+    # ------------------------------------------------------------
+    # Validation logic
+    # ------------------------------------------------------------
+    validate_weights <- function(w) {
+      if (any(is.na(w))) return("All weights must be filled in.")
+      if (any(w < 0) || any(w > 1)) return("Weights must be between 0 and 1.")
+      if (abs(sum(w) - 1) > 1e-6) return("Weights must sum exactly to 1.")
+      NULL
+    }
+    
+    current_weights <- reactive({
+      c(Momentum = input$mom,
+        Quality  = input$qua,
+        Value    = input$val)
+    })
+    
+    validation_message <- reactive({
+      validate_weights(current_weights())
+    })
+    
+    output$sum_display <- renderUI({
+      
+      w <- current_weights()
+      s <- sum(w, na.rm = TRUE)
+      
+      is_valid_sum <- abs(s - 1) <= 1e-6
+      
+      col <- if (is_valid_sum) "#0a7f2e" else "#d11"
+      txt <- if (is_valid_sum) "✔ Valid" else "✖ Must equal 1"
+      
+      tags$div(
+        style = paste0(
+          "margin-top:6px; margin-bottom:8px; font-weight:600; color:", col, ";"
+        ),
+        paste0("Current weight sum: ", sprintf("%.4f", s), "  (", txt, ")")
+      )
+    })
+    
+    # ------------------------------------------------------------
+    # Enable / Disable Compute button dynamically
+    # ------------------------------------------------------------
+    observe({
+      shinyjs::toggleState(
+        id = session$ns("run"),
+        condition = is.null(validation_message())
+      )
+    })
+    
+    # ------------------------------------------------------------
+    # Show validation error message
+    # ------------------------------------------------------------
+    output$weight_error <- renderUI({
+      msg <- validation_message()
+      if (is.null(msg)) return(NULL)
+      
+      tags$div(
+        style = "color:#d11; font-weight:600; margin-bottom:10px;",
+        msg
+      )
+    })
+    
+    # ------------------------------------------------------------
+    # Nearest portfolio logic
+    # ------------------------------------------------------------
+    nearest_portfolio <- function(w) {
+      diffs <- sweep(W_u, 2, w, "-")
+      d <- sqrt(rowSums(diffs^2))
+      idx <- which.min(d)
+      list(w = W_u[idx, ], obj = M_u[idx, , drop = FALSE])
+    }
+    
+    # ------------------------------------------------------------
+    # Event reactive (only fires if valid)
+    # ------------------------------------------------------------
+    result <- eventReactive(input$run, {
+      
+      req(is.null(validation_message()))
+      
+      w_mgr <- current_weights()
+      
+      saa_nearest <- nearest_portfolio(SAA)
+      mgr_nearest <- nearest_portfolio(w_mgr)
+      
+      list(
+        w_mgr   = w_mgr,
+        saa_obj = saa_nearest$obj,
+        mgr_obj = mgr_nearest$obj
+      )
+    })
+    
+    # ------------------------------------------------------------
+    # Tables
+    # ------------------------------------------------------------
+    output$weights_tbl <- renderTable({
+      w_mgr <- current_weights()
+      
+      data.frame(
+        Factor    = names(SAA),
+        Strategic = as.numeric(SAA),
+        Manager   = as.numeric(w_mgr)
+      )
+    }, digits = 4)
+    
+    output$obj_tbl <- renderTable({
+      r <- result()
+      if (is.null(r)) return(NULL)
+      
+      data.frame(
+        Metric             = colnames(M_u),
+        Strategic          = as.numeric(r$saa_obj[1, ]),
+        Nearest_Portfolio  = as.numeric(r$mgr_obj[1, ])
+      )
+    }, digits = 6)
+    
+    # ------------------------------------------------------------
+    # Plot
+    # ------------------------------------------------------------
+    output$bxp_plot <- renderPlot({
+      stats_full <- sapply(seq_len(ncol(W)), function(j) {
+        quantile(W[, j], probs = c(0, 0.25, 0.5, 0.75, 1))
+      })
+      
+      bxp(
+        list(stats = stats_full, n = rep(nrow(W), 3), names = labs),
+        main = "Boxplot of Factor Ranges (Viable Baseline)",
+        boxfill = "grey85",
+        border = "black"
+      )
+      
+      points(1:3, SAA, pch = 21, bg = "red", col = "white", cex = 1.5)
+      
+      w_mgr <- current_weights()
+      if (is.null(validation_message())) {
+        points(1:3, w_mgr, pch = 21, bg = "purple", col = "white", cex = 1.5)
+      }
+      
+      legend("topright",
+             legend = c("Strategic factor allocation", "Manager allocation"),
+             pch = 16,
+             col = c("red", "purple"),
+             bty = "n")
+    })
+    
+  })
+}
+
+# ============================================================
+# MAIN NAVBAR (ALL THREE TOOLS)
+# ============================================================
+
 ui <- navbarPage(
   title = "Factor Portfolio Tools",
   useShinyjs(),
   tabPanel("Tool 1: Local Tilt Ranges", app1UI("tool1")),
-  tabPanel("Tool 2: Objective Optimiser", app2UI("tool2"))
+  tabPanel("Tool 2: Objective Optimiser", app2UI("tool2")),
+  tabPanel("Tool 3: Manager Allocation", tool3UI("tool3"))
 )
 
 server <- function(input, output, session) {
   app1Server("tool1")
   app2Server("tool2")
+  tool3Server("tool3")
 }
 
 shinyApp(ui, server)
