@@ -759,7 +759,7 @@ tool3UI <- function(id) {
   
   fluidPage(
     tags$style(HTML(APP_CSS)),
-    titlePanel("Manager Allocation → Objective Comparison"),
+    titlePanel("Factor Allocation Scenerio Analysis"),
     sidebarLayout(
       sidebarPanel(
         numericInput(ns("mom"), "Momentum", value = 0.40, min = 0, max = 1, step = STEP_2DP),
@@ -770,10 +770,10 @@ tool3UI <- function(id) {
         tags$hr(),
         actionButton(ns("run"), "Compute", class = "btn-primary"),
         tags$hr(),
-        h4("Weights: Strategic vs Manager"),
+        h4("Weights:"),
         tableOutput(ns("weights_tbl")),
         tags$hr(),
-        h4("Objective Values (Unconstrained Universe)"),
+        h4("Objective Values"),
         tableOutput(ns("obj_tbl"))
       ),
       mainPanel(
@@ -885,7 +885,7 @@ tool3Server <- function(id) {
       data.frame(
         Factor    = names(SAA),
         Strategic = as.numeric(SAA),
-        Manager   = as.numeric(w_mgr)
+        Selected   = as.numeric(w_mgr)
       )
     }, digits = 4)
     
@@ -894,9 +894,9 @@ tool3Server <- function(id) {
       if (is.null(r)) return(NULL)
       
       data.frame(
-        Metric             = colnames(M_u),
-        Strategic          = as.numeric(r$saa_obj[1, ]),
-        Nearest_Portfolio  = as.numeric(r$mgr_obj[1, ])
+        'Metric'             = colnames(M_u),
+        'Strategic'          = as.numeric(r$saa_obj[1, ]),
+        'Selected'  = as.numeric(r$mgr_obj[1, ])
       )
     }, digits = 6)
     
@@ -910,7 +910,7 @@ tool3Server <- function(id) {
       
       bxp(
         list(stats = stats_full, n = rep(nrow(W), 3), names = labs),
-        main = "Boxplot of Factor Ranges (Viable Baseline)",
+        main = "Boxplot of Factor Ranges",
         boxfill = "grey85",
         border = "black"
       )
@@ -923,7 +923,7 @@ tool3Server <- function(id) {
       }
       
       legend("topright",
-             legend = c("Strategic factor allocation", "Manager allocation"),
+             legend = c("Strategic factor allocation", "Selected allocation"),
              pch = 16,
              col = c("red", "purple"),
              bty = "n")
@@ -941,7 +941,7 @@ ui <- navbarPage(
   useShinyjs(),
   tabPanel("Tool 1: Local Tilt Ranges", app1UI("tool1")),
   tabPanel("Tool 2: Objective Optimiser", app2UI("tool2")),
-  tabPanel("Tool 3: Manager Allocation", tool3UI("tool3"))
+  tabPanel("Tool 3: Factor Allocation Scenerio Tool", tool3UI("tool3"))
 )
 
 server <- function(input, output, session) {
